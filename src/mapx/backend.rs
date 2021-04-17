@@ -122,7 +122,7 @@ where
     // Imitate the behavior of '.iter()'
     #[inline(always)]
     pub(super) fn iter(&self) -> MapxIter<K, V> {
-        todo!()
+        MapxIter{iter: self.db.iter(), _pd0: PhantomData, _pd1: PhantomData}
     }
 
     pub(super) fn contains_key(&self, key: &K) -> bool {
@@ -177,7 +177,12 @@ where
 {
     type Item = (K, V);
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        self.iter.next().map(|v| v.ok()).flatten().map(|(k, v)| {
+            (
+                pnk!(bincode::deserialize(k.as_ref())),
+                pnk!(serde_json::from_slice(&v)),
+            )
+        })
     }
 }
 
@@ -187,7 +192,16 @@ where
     V: Clone + Eq + PartialEq + Serialize + DeserializeOwned + fmt::Debug,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        todo!()
+        self.iter
+            .next_back()
+            .map(|v| v.ok())
+            .flatten()
+            .map(|(k, v)| {
+                (
+                    pnk!(bincode::deserialize(k.as_ref())),
+                    pnk!(serde_json::from_slice(&v)),
+                )
+            })
     }
 }
 
@@ -212,7 +226,7 @@ where
     V: Clone + Eq + PartialEq + Serialize + DeserializeOwned + fmt::Debug,
 {
     fn eq(&self, other: &Mapx<K, V>) -> bool {
-        todo!()
+        !self.iter().zip(other.iter()).any(|(p1, p2)| p1 != p2)
     }
 }
 

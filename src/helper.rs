@@ -5,12 +5,14 @@
 use lazy_static::lazy_static;
 use ruc::*;
 use serde::{de::DeserializeOwned, Serialize};
-use std::{borrow::Cow, cmp::Ordering, convert::TryInto, env, fmt, fs, mem, ops::Deref};
+use std::{borrow::Cow, cmp::Ordering, env, fmt, fs, io::Read, mem, ops::Deref};
 
 lazy_static! {
+    /// Directory to use for the cache
     pub static ref CACHE_DIR: String = env::var("FUNDB_DIR").unwrap_or_else(|_| "/tmp".to_owned());
 }
 
+/// Try an operation twice
 #[macro_export]
 macro_rules! try_twice {
     ($ops: expr) => {
@@ -21,6 +23,7 @@ macro_rules! try_twice {
     };
 }
 
+/// Generate a unique file path
 #[macro_export]
 macro_rules! unique_path {
     () => {
@@ -36,6 +39,7 @@ macro_rules! unique_path {
     };
 }
 
+/// Utility macro for initializing a Vecx
 #[macro_export]
 macro_rules! new_vecx {
     ($ty: ty, $in_mem_cnt: expr) => {
@@ -52,6 +56,7 @@ macro_rules! new_vecx {
     };
 }
 
+/// Utility macro for initializing a Vecx
 #[macro_export]
 macro_rules! new_vecx_custom {
     ($ty: ty, $in_mem_cnt: expr, $is_tmp: expr) => {{
@@ -75,6 +80,7 @@ macro_rules! new_vecx_custom {
     };
 }
 
+/// Utility macro for initializing a Mapx
 #[macro_export]
 macro_rules! new_mapx {
     ($ty: ty, $in_mem_cnt: expr) => {
@@ -91,6 +97,7 @@ macro_rules! new_mapx {
     };
 }
 
+/// Utility macro for initializing a Mapx
 #[macro_export]
 macro_rules! new_mapx_custom {
     ($ty: ty, $in_mem_cnt: expr, $is_tmp: expr) => {{
@@ -152,7 +159,7 @@ where
     type Target = V;
 
     fn deref(&self) -> &Self::Target {
-        todo!()
+        self.value.deref()
     }
 }
 
@@ -161,7 +168,7 @@ where
     V: Clone + Eq + PartialEq + Serialize + DeserializeOwned + fmt::Debug,
 {
     fn eq(&self, other: &Value<'a, V>) -> bool {
-        todo!()
+        self.value.eq(&other.value)
     }
 }
 
@@ -170,7 +177,7 @@ where
     V: Clone + Eq + PartialEq + Serialize + DeserializeOwned + fmt::Debug,
 {
     fn eq(&self, other: &V) -> bool {
-        todo!()
+        self.value.as_ref().eq(other)
     }
 }
 
@@ -179,7 +186,7 @@ where
     V: fmt::Debug + Clone + Eq + PartialEq + Ord + PartialOrd + Serialize + DeserializeOwned,
 {
     fn partial_cmp(&self, other: &V) -> Option<Ordering> {
-        todo!()
+        self.value.as_ref().partial_cmp(other)
     }
 }
 
@@ -188,7 +195,7 @@ where
     V: Clone + Eq + PartialEq + Serialize + DeserializeOwned + fmt::Debug,
 {
     fn from(v: V) -> Self {
-        todo!()
+        Self { value: Cow::Owned(v)}
     }
 }
 
@@ -197,7 +204,7 @@ where
     V: Clone + Eq + PartialEq + Serialize + DeserializeOwned + fmt::Debug,
 {
     fn from(v: Cow<'a, V>) -> Self {
-        todo!()
+        Self { value: v }
     }
 }
 
@@ -206,7 +213,7 @@ where
     V: Clone + Eq + PartialEq + Serialize + DeserializeOwned + fmt::Debug,
 {
     fn from(v: Value<'a, V>) -> Self {
-        todo!()
+        v.value
     }
 }
 
@@ -215,7 +222,7 @@ where
     V: Clone + Eq + PartialEq + Serialize + DeserializeOwned + fmt::Debug,
 {
     fn from(v: &V) -> Self {
-        todo!()
+        Self { value: Cow::Owned(v.clone())}
     }
 }
 
@@ -225,15 +232,18 @@ where
 
 #[inline(always)]
 pub(crate) fn sled_open(path: &str, is_tmp: bool) -> Result<sled::Db> {
-    todo!()
+    sled::Config::new().path(path).temporary(is_tmp).open().c(d!())
 }
 
 #[inline(always)]
 pub(crate) fn read_db_len(path: &str) -> Result<usize> {
-    todo!()
+    let mut file = fs::File::open(path).c(d!())?;
+    let mut buf = [0; mem::size_of::<usize>()];
+    file.read_exact(&mut buf).c(d!())?;
+    Ok(usize::from_le_bytes(buf))
 }
 
 #[inline(always)]
 pub(crate) fn write_db_len(path: &str, len: usize) -> Result<()> {
-    todo!()
+    fs::write(path, usize::to_le_bytes(len)).c(d!())
 }
